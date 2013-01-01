@@ -244,9 +244,11 @@ void GPUCommon::ProcessDLQueue()
 		if(list.status == PSP_GE_LIST_DONE)
 		{
 			dlQueue.erase(iter);
-			// TODO: Should this run while interrupts are suspended?
-			if (interruptEnabled)
-				__TriggerInterruptWithArg(PSP_INTR_HLE, PSP_GE_INTR, list.subIntrBase | PSP_GE_SUBINTR_FINISH, op & 0xFFFF);
+
+			if (interruptEnabled) {
+				int subIntr = list.subIntrBase < 0 ? PSP_INTR_SUB_NONE : list.subIntrBase | PSP_GE_SUBINTR_FINISH;
+				__TriggerInterrupt(PSP_INTR_HLE, PSP_GE_INTR, subIntr);
+			}
 		}
 	}
 }
@@ -333,9 +335,9 @@ void GPUCommon::ExecuteOp(u32 op, u32 diff) {
 					ERROR_LOG(G3D, "UNKNOWN Signal UNIMPLEMENTED %i ! signal/end: %04x %04x", behaviour, signal, enddata);
 					break;
 				}
-				// TODO: Should this run while interrupts are suspended?
-				if (interruptEnabled)
-					__TriggerInterruptWithArg(PSP_INTR_HLE, PSP_GE_INTR, currentList()->subIntrBase | PSP_GE_SUBINTR_SIGNAL, signal);
+
+				if (interruptEnabled && currentList()->subIntrBase >= 0)
+					__TriggerInterrupt(PSP_INTR_HLE, PSP_GE_INTR, currentList()->subIntrBase | PSP_GE_SUBINTR_SIGNAL);
 			}
 			break;
 		case GE_CMD_FINISH:

@@ -63,26 +63,9 @@ u32 sceGeEdramGetSize()
 	return retVal;
 }
 
-// TODO: Probably shouldn't use an interrupt?
 int __GeSubIntrBase(int callbackId)
 {
-	// Negative means don't use.
-	if (callbackId < 0)
-		return 0;
-
-	if (callbackId >= (int)(ARRAY_SIZE(ge_used_callbacks)))
-	{
-		WARN_LOG(HLE, "Unexpected (too high) GE callback id %d, ignoring", callbackId);
-		return 0;
-	}
-
-	if (!ge_used_callbacks[callbackId])
-	{
-		WARN_LOG(HLE, "Unregistered GE callback id %d, ignoring", callbackId);
-		return 0;
-	}
-
-	return (callbackId + 1) << 16;
+	return callbackId * 2;
 }
 
 u32 sceGeListEnQueue(u32 listAddress, u32 stallAddress, int callbackId,

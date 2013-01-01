@@ -183,7 +183,7 @@ void hleEnterVblank(u64 userdata, int cyclesLate) {
 	vblankWaitingThreads.clear();
 
 	// Trigger VBlank interrupt handlers.
-	__TriggerInterrupt(PSP_INTR_IMMEDIATE | PSP_INTR_ONLY_IF_ENABLED, PSP_VBLANK_INTR);
+	__TriggerInterrupt(PSP_INTR_IMMEDIATE | PSP_INTR_ONLY_IF_ENABLED, PSP_VBLANK_INTR, PSP_INTR_SUB_ALL);
 
 	CoreTiming::ScheduleEvent(msToCycles(vblankMs) - cyclesLate, leaveVblankEvent, vbCount+1);
 
