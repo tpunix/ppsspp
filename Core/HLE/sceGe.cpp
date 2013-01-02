@@ -28,9 +28,43 @@
 static PspGeCallbackData ge_callback_data[16];
 static bool ge_used_callbacks[16] = {0};
 
+class GeIntrHandler : public IntrHandler
+{
+public:
+	GeIntrHandler() : IntrHandler(PSP_GE_INTR) {}
+
+	bool run(PendingInterrupt& pend)
+	{
+		if(has(pend.subintr))
+			return IntrHandler::run(pend);
+
+		gpu->ProcessDLQueue();
+
+		return false;
+	}
+
+	void copyArgsToCPU(PendingInterrupt& pend)
+	{
+		SubIntrHandler* handler = get(pend.subintr);
+		DEBUG_LOG(CPU, "Entering interrupt handler %08x", handler->handlerAddress);
+		currentMIPS->pc = handler->handlerAddress;
+		u32 data = gpu->currentList()->subIntrToken;
+		currentMIPS->r[MIPS_REG_A0] = data & 0xFFFF;
+		currentMIPS->r[MIPS_REG_A1] = handler->handlerArg;
+		currentMIPS->r[MIPS_REG_A2] = 0;
+		// RA is already taken care of
+	}
+
+	virtual void handleResult(PendingInterrupt& pend)
+	{
+		gpu->ProcessDLQueue();
+	}
+};
+
 void __GeInit()
 {
 	memset(&ge_used_callbacks, 0, sizeof(ge_used_callbacks));
+	__RegisterIntrHandler(PSP_GE_INTR, new GeIntrHandler());
 }
 
 void __GeDoState(PointerWrap &p)

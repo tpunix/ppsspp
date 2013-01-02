@@ -13,6 +13,9 @@ u32 GPUCommon::DrawSync(int mode) {
 	if(mode < 0 || mode > 1)
 		return 0x80000107;
 
+	while(!dlQueue.empty() && currentList()->status == PSP_GE_LIST_DONE)
+		dlQueue.pop_front();
+
 	if(mode == 0) {
 		// Sould be post wait
 		// Clear the queue
@@ -199,14 +202,17 @@ u32 GPUCommon::Break(int mode)
 
 void GPUCommon::ProcessDLQueue()
 {
-	DisplayListQueue::iterator iter = dlQueue.begin();
-	
 	u32 op;
 
 	while(!dlQueue.empty())
 	{
 		DisplayList &list = *currentList();
 		//DEBUG_LOG(G3D,"Okay, starting DL execution at %08x - stall = %08x", l.pc, l.stall);
+
+		if(list.status == PSP_GE_LIST_DONE) {
+			dlQueue.pop_front();
+			continue;
+		}
 		
 		if (list.status == PSP_GE_LIST_PAUSED)
 			break;
@@ -230,7 +236,7 @@ void GPUCommon::ProcessDLQueue()
 		// TODO: Add a compiler flag to remove stuff like this at very-final build time.
 		if (dumpThisFrame_) {
 			char temp[256];
-			GeDisassembleOp(list.pc, op, prev, temp);
+			GeDisassembleOp(list.pc, op, Memory::ReadUnchecked_U32(list.pc - 4), temp);
 			NOTICE_LOG(G3D, "%s", temp);
 		}
 
@@ -239,16 +245,10 @@ void GPUCommon::ProcessDLQueue()
 		ExecuteOp(op, diff);
 		
 		list.pc += 4;
-		prev = op;
 
-		if(list.status == PSP_GE_LIST_DONE)
-		{
-			dlQueue.erase(iter);
-
-			if (interruptEnabled) {
-				int subIntr = list.subIntrBase < 0 ? PSP_INTR_SUB_NONE : list.subIntrBase | PSP_GE_SUBINTR_FINISH;
-				__TriggerInterrupt(PSP_INTR_HLE, PSP_GE_INTR, subIntr);
-			}
+		if(interruptRunning) {
+			interruptRunning = false;
+			break;
 		}
 	}
 }
@@ -305,47 +305,58 @@ void GPUCommon::ExecuteOp(u32 op, u32 diff) {
 		break;
 
 	case GE_CMD_END:
-		switch (prev >> 24) {
-		case GE_CMD_SIGNAL:
-			{
-				// TODO: see http://code.google.com/p/jpcsp/source/detail?r=2935#
-				int behaviour = (prev >> 16) & 0xFF;
-				int signal = prev & 0xFFFF;
-				int enddata = data & 0xFFFF;
-				switch (behaviour) {
-				case 1:  // Signal with Wait
-					ERROR_LOG(G3D, "Signal with Wait UNIMPLEMENTED! signal/end: %04x %04x", signal, enddata);
-					break;
-				case 2:
-					ERROR_LOG(G3D, "Signal without wait. signal/end: %04x %04x", signal, enddata);
-					break;
-				case 3:
-					ERROR_LOG(G3D, "Signal with Pause UNIMPLEMENTED! signal/end: %04x %04x", signal, enddata);
-					break;
-				case 0x10:
-					ERROR_LOG(G3D, "Signal with Jump UNIMPLEMENTED! signal/end: %04x %04x", signal, enddata);
-					break;
-				case 0x11:
-					ERROR_LOG(G3D, "Signal with Call UNIMPLEMENTED! signal/end: %04x %04x", signal, enddata);
-					break;
-				case 0x12:
-					ERROR_LOG(G3D, "Signal with Return UNIMPLEMENTED! signal/end: %04x %04x", signal, enddata);
-					break;
-				default:
-					ERROR_LOG(G3D, "UNKNOWN Signal UNIMPLEMENTED %i ! signal/end: %04x %04x", behaviour, signal, enddata);
-					break;
-				}
+		{
+			u32 prev = Memory::ReadUnchecked_U32(currentList()->pc - 4);
+			currentList()->subIntrToken = prev & 0xFFFF;
+			switch (prev >> 24) {
+			case GE_CMD_SIGNAL:
+				{
+					// TODO: see http://code.google.com/p/jpcsp/source/detail?r=2935#
+					int behaviour = (prev >> 16) & 0xFF;
+					int signal = prev & 0xFFFF;
+					int enddata = data & 0xFFFF;
+					switch (behaviour) {
+					case 1:  // Signal with Wait
+						ERROR_LOG(G3D, "Signal with Wait UNIMPLEMENTED! signal/end: %04x %04x", signal, enddata);
+						break;
+					case 2:
+						ERROR_LOG(G3D, "Signal without wait. signal/end: %04x %04x", signal, enddata);
+						break;
+					case 3:
+						ERROR_LOG(G3D, "Signal with Pause UNIMPLEMENTED! signal/end: %04x %04x", signal, enddata);
+						break;
+					case 0x10:
+						ERROR_LOG(G3D, "Signal with Jump UNIMPLEMENTED! signal/end: %04x %04x", signal, enddata);
+						break;
+					case 0x11:
+						ERROR_LOG(G3D, "Signal with Call UNIMPLEMENTED! signal/end: %04x %04x", signal, enddata);
+						break;
+					case 0x12:
+						ERROR_LOG(G3D, "Signal with Return UNIMPLEMENTED! signal/end: %04x %04x", signal, enddata);
+						break;
+					default:
+						ERROR_LOG(G3D, "UNKNOWN Signal UNIMPLEMENTED %i ! signal/end: %04x %04x", behaviour, signal, enddata);
+						break;
+					}
 
-				if (interruptEnabled && currentList()->subIntrBase >= 0)
-					__TriggerInterrupt(PSP_INTR_HLE, PSP_GE_INTR, currentList()->subIntrBase | PSP_GE_SUBINTR_SIGNAL);
+					if (interruptEnabled && currentList()->subIntrBase >= 0) {
+						interruptRunning = true;
+						__TriggerInterrupt(PSP_INTR_HLE, PSP_GE_INTR, currentList()->subIntrBase | PSP_GE_SUBINTR_SIGNAL);
+					}
+				}
+				break;
+			case GE_CMD_FINISH:
+				currentList()->status = PSP_GE_LIST_DONE;
+				if (interruptEnabled && currentList()->subIntrBase >= 0) {
+					interruptRunning = true;
+					int subIntr = currentList()->subIntrBase < 0 ? PSP_INTR_SUB_NONE : currentList()->subIntrBase | PSP_GE_SUBINTR_FINISH;
+					__TriggerInterrupt(PSP_INTR_HLE, PSP_GE_INTR, subIntr);
+				}
+				break;
+			default:
+				DEBUG_LOG(G3D,"Ah, not finished: %06x", prev & 0xFFFFFF);
+				break;
 			}
-			break;
-		case GE_CMD_FINISH:
-			currentList()->status = PSP_GE_LIST_DONE;
-			break;
-		default:
-			DEBUG_LOG(G3D,"Ah, not finished: %06x", prev & 0xFFFFFF);
-			break;
 		}
 		break;
 	default:

@@ -6,11 +6,11 @@ class GPUCommon : public GPUInterface
 {
 public:
 	GPUCommon() :
+		interruptRunning(false),
 		interruptEnabled(true),
 		dumpNextFrame_(false),
 		dumpThisFrame_(false)
 	{
-
 		for(int i = 0; i < DisplayListMaxCount; ++i)
 		{
 			dls[i].queued = false;
@@ -40,13 +40,13 @@ protected:
 	DisplayList dls[DisplayListMaxCount];
 	DisplayListQueue dlQueue;
 
-	u32 prev;
 	bool interruptRunning;
 	bool interruptEnabled;
 
 	bool dumpNextFrame_;
 	bool dumpThisFrame_;
 
+public:
 	DisplayList* currentList()
 	{
 		if(dlQueue.empty())

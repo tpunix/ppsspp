@@ -36,6 +36,7 @@ struct DisplayList
 	u32 stall;
 	DisplayListStatus status;
 	int subIntrBase;
+	u16 subIntrToken;
 	u32 stack[32];
 	int stackptr;
 	bool interrupted;
@@ -57,17 +58,18 @@ public:
 	virtual void InitClear() = 0;
 
 	// Draw queue management
-	// TODO: Much of this should probably be shared between the different GPU implementations.
+	virtual DisplayList* currentList() = 0;
 	virtual u32  EnqueueList(u32 listpc, u32 stall, int subIntrBase, bool head) = 0;
 	virtual u32  DequeueList(int listid) = 0;
 	virtual u32  UpdateStall(int listid, u32 newstall) = 0;
 	virtual u32  DrawSync(int mode) = 0;
+	virtual int  ListStatus(int listid) = 0;
 	virtual u32  Continue() = 0;
 	virtual u32  Break(int mode) = 0;
 
 	virtual void PreExecuteOp(u32 op, u32 diff) = 0;
 	virtual void ExecuteOp(u32 op, u32 diff) = 0;
-	virtual int  ListStatus(int listid) = 0;
+	virtual void ProcessDLQueue() = 0;
 
 	// Framebuffer management
 	virtual void SetDisplayFramebuffer(u32 framebuf, u32 stride, int format) = 0;
