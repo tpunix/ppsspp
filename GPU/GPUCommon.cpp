@@ -23,7 +23,10 @@ u32 GPUCommon::DrawSync(int mode) {
 			// Clear the queue
 			dlQueue.clear();
 			for(int i = 0; i < DisplayListMaxCount; ++i)
+			{
 				dls[i].queued = false;
+				dls[i].status = PSP_GE_LIST_NONE;
+			}
 			return 0;
 		}
 
@@ -49,13 +52,16 @@ void GPUCommon::CheckDrawSync()
 		drawSyncWait = false;
 		__KernelTriggerWait(WAITTYPE_GEDRAWSYNC, 0, 0, false);
 		for(int i = 0; i < DisplayListMaxCount; ++i)
+		{
 			dls[i].queued = false;
+			dls[i].status = PSP_GE_LIST_NONE;
+		}
 	}
 }
 
 int GPUCommon::ListSync(int listid, int mode)
 {
-	if(listid < 0 || listid >= DisplayListMaxCount || !dls[listid].queued)
+	if(listid < 0 || listid >= DisplayListMaxCount || dls[listid].status == PSP_GE_LIST_NONE)
 		return 0x80000100; // INVALID_ID
 
 	if(mode < 0 || mode > 1)
@@ -91,10 +97,15 @@ u32 GPUCommon::EnqueueList(u32 listpc, u32 stall, int subIntrBase, bool head)
 	int id = -1;
 	for(int i = 0; i < DisplayListMaxCount; ++i)
 	{
-		if(dls[i].queued == false)
+		if(dls[i].status == PSP_GE_LIST_NONE)
 		{
+			// Prefer a queue that has been reset
 			id = i;
 			break;
+		}
+		if(id < 0 && dls[i].queued == false)
+		{
+			id = i;
 		}
 	}
 	if(id < 0)
@@ -136,13 +147,14 @@ u32 GPUCommon::EnqueueList(u32 listpc, u32 stall, int subIntrBase, bool head)
 
 u32 GPUCommon::DequeueList(int listid)
 {
-	if(listid < 0 || listid >= DisplayListMaxCount || !dls[listid].queued)
+	if(listid < 0 || listid >= DisplayListMaxCount || dls[listid].status == PSP_GE_LIST_NONE)
 		return 0x80000100;
 	
 	if(dls[listid].status == PSP_GE_LIST_DRAWING || dls[listid].status == PSP_GE_LIST_PAUSED)
 		return 0x80000021;
 
 	dls[listid].queued = false;
+	dls[listid].status = PSP_GE_LIST_NONE;
 	dlQueue.remove(listid);
 
 	if(dls[listid].threadWaiting) {
@@ -157,7 +169,7 @@ u32 GPUCommon::DequeueList(int listid)
 
 u32 GPUCommon::UpdateStall(int listid, u32 newstall)
 {
-	if(listid < 0 || listid >= DisplayListMaxCount || !dls[listid].queued)
+	if(listid < 0 || listid >= DisplayListMaxCount || dls[listid].status == PSP_GE_LIST_NONE)
 		return 0x80000100;
 
 	dls[listid].stall = newstall & 0xFFFFFFF;
@@ -211,7 +223,10 @@ u32 GPUCommon::Break(int mode)
 		// Clear the queue
 		dlQueue.clear();
 		for(int i = 0; i < DisplayListMaxCount; ++i)
+		{
 			dls[i].queued = false;
+			dls[i].status = PSP_GE_LIST_NONE;
+		}
 
 		CheckDrawSync();
 
@@ -387,7 +402,9 @@ void GPUCommon::ExecuteOp(u32 op, u32 diff) {
 				break;
 			case GE_CMD_FINISH:
 				{
+					DEBUG_LOG(G3D, "Finish %i ! signal/end: %04x %04x", dlQueue.front(), prev & 0xFFFF, data & 0xFFFF);
 					currentList()->status = PSP_GE_LIST_DONE;
+					currentList()->queued = false;
 					if(currentList()->threadWaiting) {
 						currentList()->threadWaiting = false;
 						__KernelTriggerWait(WAITTYPE_GELISTSYNC, dlQueue.front());
@@ -406,7 +423,7 @@ void GPUCommon::ExecuteOp(u32 op, u32 diff) {
 		}
 		break;
 	default:
-		ERROR_LOG(G3D, "DL Unknown: %08x @ %08x", op, currentList() == NULL ? 0 : currentList()->pc);
+		DEBUG_LOG(G3D, "DL Unknown: %08x @ %08x", op, currentList() == NULL ? 0 : currentList()->pc);
 	}
 }
 

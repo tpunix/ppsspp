@@ -28,6 +28,8 @@ enum DisplayListStatus
 	PSP_GE_LIST_DRAWING  = 2, // drawing or stalled
 	PSP_GE_LIST_STALLING = 3, // stalled, never set, only returned by ListSync
 	PSP_GE_LIST_PAUSED   = 4, // after break
+
+	PSP_GE_LIST_NONE     = 5, // Internal state
 };
 
 struct DisplayList

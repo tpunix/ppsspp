@@ -15,6 +15,7 @@ public:
 		for(int i = 0; i < DisplayListMaxCount; ++i)
 		{
 			dls[i].queued = false;
+			dls[i].status = PSP_GE_LIST_NONE;
 		}
 	}
 
