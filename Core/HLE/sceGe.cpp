@@ -155,13 +155,13 @@ int sceGeListSync(u32 displayListID, u32 mode) //0 : wait for completion		1:chec
 u32 sceGeDrawSync(u32 mode)
 {
 	//wait/check entire drawing state
-	DEBUG_LOG(HLE, "FAKE sceGeDrawSync(mode=%d)  (0=wait for completion)", mode);
+	DEBUG_LOG(HLE, "sceGeDrawSync(mode=%d)  (0=wait for completion, 1=peek)", mode);
 	return gpu->DrawSync(mode);
 }
 
 int sceGeContinue()
 {
-	ERROR_LOG(HLE, "UNIMPL sceGeContinue");
+	DEBUG_LOG(HLE, "sceGeContinue");
 	// no arguments
 	return gpu->Continue();
 }
@@ -169,7 +169,7 @@ int sceGeContinue()
 int sceGeBreak(u32 mode)
 {
 	//mode => 0 : current dlist 1: all drawing
-	ERROR_LOG(HLE, "UNIMPL sceGeBreak(mode=%d)", mode);
+	DEBUG_LOG(HLE, "sceGeBreak(mode=%d)", mode);
 	return gpu->Break(mode);
 }
 
