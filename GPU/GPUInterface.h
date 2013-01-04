@@ -41,6 +41,7 @@ struct DisplayList
 	int stackptr;
 	bool interrupted;
 	bool queued;
+	bool threadWaiting;
 
 	bool stalled() {
 		return pc == stall;
@@ -63,7 +64,7 @@ public:
 	virtual u32  DequeueList(int listid) = 0;
 	virtual u32  UpdateStall(int listid, u32 newstall) = 0;
 	virtual u32  DrawSync(int mode) = 0;
-	virtual int  ListStatus(int listid) = 0;
+	virtual int  ListSync(int listid, int mode) = 0;
 	virtual u32  Continue() = 0;
 	virtual u32  Break(int mode) = 0;
 

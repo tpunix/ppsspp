@@ -73,6 +73,8 @@ const char *waitTypeStrings[] = {
 	"Mutex",
 	"LwMutex",
 	"Ctrl",
+	"GeDrawSync",
+	"GeListSync",
 };
 
 struct NativeCallback

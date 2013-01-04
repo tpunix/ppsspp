@@ -8,6 +8,7 @@ public:
 	GPUCommon() :
 		interruptRunning(false),
 		interruptEnabled(true),
+		drawSyncWait(false),
 		dumpNextFrame_(false),
 		dumpThisFrame_(false)
 	{
@@ -28,7 +29,7 @@ public:
 	virtual u32  UpdateStall(int listid, u32 newstall);
 	virtual u32  EnqueueList(u32 listpc, u32 stall, int subIntrBase, bool head);
 	virtual u32  DequeueList(int listid);
-	virtual int  ListStatus(int listid);
+	virtual int  ListSync(int listid, int mode);
 	virtual u32  DrawSync(int mode);
 	virtual void DoState(PointerWrap &p);
 	virtual u32  Continue();
@@ -43,8 +44,12 @@ protected:
 	bool interruptRunning;
 	bool interruptEnabled;
 
+	bool drawSyncWait;
+
 	bool dumpNextFrame_;
 	bool dumpThisFrame_;
+
+	void CheckDrawSync();
 
 public:
 	DisplayList* currentList()

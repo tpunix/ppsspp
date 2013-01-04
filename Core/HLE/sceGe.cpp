@@ -149,9 +149,7 @@ int sceGeListUpdateStallAddr(u32 displayListID, u32 stallAddress)
 int sceGeListSync(u32 displayListID, u32 mode) //0 : wait for completion		1:check and return
 {
 	DEBUG_LOG(HLE, "sceGeListSync(dlid=%08x, mode=%08x)", displayListID, mode);
-	if(mode == 1)
-		return gpu->ListStatus(displayListID);
-	return 0;
+	return gpu->ListSync(displayListID, mode);
 }
 
 u32 sceGeDrawSync(u32 mode)
