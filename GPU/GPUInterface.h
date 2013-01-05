@@ -61,7 +61,7 @@ public:
 	virtual void InitClear() = 0;
 
 	// Draw queue management
-	virtual DisplayList* currentList() = 0;
+	virtual DisplayList* getList(int listid) = 0;
 	virtual u32  EnqueueList(u32 listpc, u32 stall, int subIntrBase, bool head) = 0;
 	virtual u32  DequeueList(int listid) = 0;
 	virtual u32  UpdateStall(int listid, u32 newstall) = 0;

@@ -2,6 +2,7 @@
 #include "../Core/MemMap.h"
 #include "../Core/HLE/sceKernelThread.h"
 #include "../Core/HLE/sceKernelInterrupt.h"
+#include "../Core/HLE/sceGe.h"
 #include "GeDisasm.h"
 #include "GPUCommon.h"
 #include "GPUState.h"
@@ -32,6 +33,7 @@ u32 GPUCommon::DrawSync(int mode) {
 
 		drawSyncWait = true;
 		__KernelWaitCurThread(WAITTYPE_GEDRAWSYNC, 0, 0, 0, false);
+		ERROR_LOG(HLE, "Blocking thread on DrawSync");
 
 		return 0;
 	}
@@ -81,6 +83,7 @@ int GPUCommon::ListSync(int listid, int mode)
 	if(dls[listid].status != PSP_GE_LIST_DONE) {
 		dls[listid].threadWaiting = true;
 		__KernelWaitCurThread(WAITTYPE_GELISTSYNC, listid, 0, 0, false);
+		ERROR_LOG(HLE, "Blocking thread on ListSync");
 	}
 	return 0;
 }	
@@ -396,7 +399,7 @@ void GPUCommon::ExecuteOp(u32 op, u32 diff) {
 
 					if (interruptEnabled && currentList()->subIntrBase >= 0) {
 						interruptRunning = true;
-						__TriggerInterrupt(PSP_INTR_HLE, PSP_GE_INTR, currentList()->subIntrBase | PSP_GE_SUBINTR_SIGNAL);
+						__GeTriggerInterrupt(dlQueue.front());
 					}
 				}
 				break;
@@ -411,8 +414,7 @@ void GPUCommon::ExecuteOp(u32 op, u32 diff) {
 					}
 					if (interruptEnabled && currentList()->subIntrBase >= 0) {
 						interruptRunning = true;
-						int subIntr = currentList()->subIntrBase < 0 ? PSP_INTR_SUB_NONE : currentList()->subIntrBase | PSP_GE_SUBINTR_FINISH;
-						__TriggerInterrupt(PSP_INTR_HLE, PSP_GE_INTR, subIntr);
+						__GeTriggerInterrupt(dlQueue.front());
 					}
 				}
 				break;

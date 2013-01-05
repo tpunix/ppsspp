@@ -53,6 +53,11 @@ protected:
 	void CheckDrawSync();
 
 public:
+	virtual DisplayList* getList(int listid)
+	{
+		return &dls[listid];
+	}
+
 	DisplayList* currentList()
 	{
 		if(dlQueue.empty())

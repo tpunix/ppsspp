@@ -27,6 +27,7 @@
 
 static PspGeCallbackData ge_callback_data[16];
 static bool ge_used_callbacks[16] = {0};
+static std::list<int> ge_pending_cb;
 
 class GeIntrHandler : public IntrHandler
 {
@@ -35,35 +36,42 @@ public:
 
 	bool run(PendingInterrupt& pend)
 	{
-		if(has(pend.subintr))
-			return IntrHandler::run(pend);
+		int listid = ge_pending_cb.front();
+		ge_pending_cb.pop_front();
+		DisplayList* dl = gpu->getList(listid);
 
-		gpu->ProcessDLQueue();
+		u32 cmd = Memory::ReadUnchecked_U32(dl->pc - 8) >> 24;
+		int subintr = dl->subIntrBase | (cmd == GE_CMD_FINISH ? PSP_GE_SUBINTR_FINISH : PSP_GE_SUBINTR_SIGNAL);
+		SubIntrHandler* handler = get(subintr);
 
+		if(handler != NULL)
+		{
+			DEBUG_LOG(CPU, "Entering interrupt handler %08x", handler->handlerAddress);
+			currentMIPS->pc = handler->handlerAddress;
+			u32 data = dl->subIntrToken;
+			currentMIPS->r[MIPS_REG_A0] = data & 0xFFFF;
+			currentMIPS->r[MIPS_REG_A1] = handler->handlerArg;
+			currentMIPS->r[MIPS_REG_A2] = 0;
+			// RA is already taken care of in __RunOnePendingInterrupt
+
+			return true;
+		}
+
+		WARN_LOG(HLE, "Ignoring interrupt for display list %d, already been released.", listid);
 		return false;
-	}
-
-	void copyArgsToCPU(PendingInterrupt& pend)
-	{
-		SubIntrHandler* handler = get(pend.subintr);
-		DEBUG_LOG(CPU, "Entering interrupt handler %08x", handler->handlerAddress);
-		currentMIPS->pc = handler->handlerAddress;
-		u32 data = gpu->currentList()->subIntrToken;
-		currentMIPS->r[MIPS_REG_A0] = data & 0xFFFF;
-		currentMIPS->r[MIPS_REG_A1] = handler->handlerArg;
-		currentMIPS->r[MIPS_REG_A2] = 0;
-		// RA is already taken care of
 	}
 
 	virtual void handleResult(PendingInterrupt& pend)
 	{
-		gpu->ProcessDLQueue();
+		if(ge_pending_cb.empty())
+			gpu->ProcessDLQueue();
 	}
 };
 
 void __GeInit()
 {
 	memset(&ge_used_callbacks, 0, sizeof(ge_used_callbacks));
+	ge_pending_cb.clear();
 	__RegisterIntrHandler(PSP_GE_INTR, new GeIntrHandler());
 }
 
@@ -71,6 +79,7 @@ void __GeDoState(PointerWrap &p)
 {
 	p.DoArray(ge_callback_data, ARRAY_SIZE(ge_callback_data));
 	p.DoArray(ge_used_callbacks, ARRAY_SIZE(ge_used_callbacks));
+	p.Do(ge_pending_cb);
 	// Everything else is done in sceDisplay.
 	p.DoMarker("sceGe");
 }
@@ -78,6 +87,12 @@ void __GeDoState(PointerWrap &p)
 void __GeShutdown()
 {
 
+}
+
+void __GeTriggerInterrupt(int listid)
+{
+	ge_pending_cb.push_back(listid);
+	__TriggerInterrupt(PSP_INTR_HLE, PSP_GE_INTR, PSP_INTR_SUB_NONE);
 }
 
 // The GE is implemented wrong - it should be parallel to the CPU execution instead of
