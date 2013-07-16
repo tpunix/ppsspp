@@ -73,8 +73,8 @@ static const char *lieAboutSuccessModules[] = {
 
 static const char *blacklistedModules[] = {
 	"sceATRAC3plus_Library",
-	"sceFont_Library",
-	"SceFont_Library",
+	//"sceFont_Library",
+	//"SceFont_Library",
 	"SceHttp_Library",
 	"sceMpeg_library",
 	"sceNetAdhocctl_Library",

@@ -993,6 +993,6 @@ const HLEFunction sceLibFont[] = {
 };
 
 void Register_sceFont() {
-	RegisterModule("sceLibFont", ARRAY_SIZE(sceLibFont), sceLibFont);
+	//RegisterModule("sceLibFont", ARRAY_SIZE(sceLibFont), sceLibFont);
 }
 
