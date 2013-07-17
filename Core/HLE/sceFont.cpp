@@ -992,7 +992,146 @@ const HLEFunction sceLibFont[] = {
 	{0x02d7f94b, WrapI_U<sceFontFlush>, "sceFontFlush"},
 };
 
+/**********************************************************************************************************************/
+
+/** Key types */
+enum RegKeyTypes
+{
+    REG_TYPE_DIR = 1,    /** Key is a directory */
+    REG_TYPE_INT = 2,    /** Key is an integer (4 bytes) */
+    REG_TYPE_STR = 3,    /** Key is a string */
+    REG_TYPE_BIN = 4,    /** Key is a binary string */
+};
+
+typedef struct {
+	char name[32];
+	RegKeyTypes type;
+	int size;
+	u8 value[32];
+}SCEREG_ENTRY;
+
+SCEREG_ENTRY reg_list[] = {
+	{ "horizontal", REG_TYPE_INT, 4,  {0x12, 0x20, 0, 0,} },
+	{ "vertical",   REG_TYPE_INT, 4,  {0x12, 0x20, 0, 0,} },
+	{ "path_name",  REG_TYPE_STR, 13, "flash0:/font\0" },
+	{ "num_fonts",  REG_TYPE_INT, 4,  {0x12, 0, 0, 0,} },
+	{ "h_size",     REG_TYPE_INT, 4,  {0x88, 0x02, 0, 0,} },
+	{ "v_size",     REG_TYPE_INT, 4,  {0x88, 0x02, 0, 0,} },
+
+	{ "h_resolution",     REG_TYPE_INT, 4,  {0x12, 0x20, 0, 0,} },
+	{ "v_resolution",     REG_TYPE_INT, 4,  {0x12, 0x20, 0, 0,} },
+	{ "extra_attributes", REG_TYPE_INT, 4,  {0, 0, 0, 0,} },
+	{ "weight",     REG_TYPE_INT, 4,  {0, 0, 0, 0,} },
+	{ "family_code",REG_TYPE_INT, 4,  {1, 0, 0, 0,} },
+	{ "style",      REG_TYPE_INT, 4,  {1, 0, 0, 0,} },
+	{ "sub_style",  REG_TYPE_INT, 4,  {0, 0, 0, 0,} },
+	{ "language_code",    REG_TYPE_INT, 4,  {3, 0, 0, 0,} },
+	{ "region_code",      REG_TYPE_INT, 4,  {0, 0, 0, 0,} },
+	{ "country_code",     REG_TYPE_INT, 4,  {3, 0, 0, 0,} },
+	{ "expire_date",REG_TYPE_INT, 4,  {0, 0, 0, 0,} },
+	{ "shadow_option",    REG_TYPE_INT, 4,  {0, 0, 0, 0,} },
+
+	{ "font_name",  REG_TYPE_STR, 8,  "AsiaNHH\0" },
+	{ "file_name",  REG_TYPE_STR, 8,  "kr0.pgf\0" },
+};
+
+int reg_nums = ARRAY_SIZE(reg_list);
+
+SCEREG_ENTRY *find_reg(const char *name)
+{
+	int i;
+
+	for(i=0; i<reg_nums; i++){
+		if(strcmp(reg_list[i].name, name)==0)
+			return &reg_list[i];
+	}
+
+	return NULL;
+}
+
+int sceRegOpenRegistry(u32 reg_ptr, int mode, u32 h_ptr)
+{
+	ERROR_LOG_REPORT(HLE, "UNIMPL sceRegOpenRegistry()");
+	return 0;
+}
+
+int sceRegCloseRegistry(u32 h)
+{
+	ERROR_LOG_REPORT(HLE, "UNIMPL sceRegCloseRegistry()");
+	return 0;
+}
+
+int sceRegOpenCategory(u32 h, const char *name, int mode, u32 hd_ptr)
+{
+	ERROR_LOG_REPORT(HLE, "UNIMPL sceRegOpenCategory(%08x, %s, %08x, %08x)", h, name, mode, hd_ptr);
+	return 0;
+}
+
+int sceRegCloseCategory(u32 hd)
+{
+	ERROR_LOG_REPORT(HLE, "UNIMPL sceRegCloseCategory()");
+	return 0;
+}
+
+int sceRegGetKeyInfo(u32 hd, const char *name, u32 hk_ptr, u32 type_ptr, u32 size_ptr)
+{
+	SCEREG_ENTRY *reg;
+
+	INFO_LOG(HLE, "sceRegGetKeyInfo(%08x, %s, %08x, %08x, %08x)", hd, name, hk_ptr, type_ptr, size_ptr);
+
+	reg = find_reg(name);
+	if(reg){
+		Memory::Write_U32((u32)reg, hk_ptr);
+		Memory::Write_U32(reg->type, type_ptr);
+		Memory::Write_U32(reg->size, size_ptr);
+		return 0;
+	}else{
+		INFO_LOG(HLE, "    sceRegGetKeyInfo: no such key %s", name);
+		return -1;
+	}
+}
+
+int sceRegGetKeyValue(u32 hd, u32 hk, u32 val_ptr, u32 size)
+{
+	SCEREG_ENTRY *reg;
+
+	INFO_LOG(HLE, "UNIMPL sceRegGetKeyValue(%08x, %08x, %08x, %08x)", hd, hk, val_ptr, size);
+
+	reg = (SCEREG_ENTRY *)hk;
+	if(reg){
+		Memory::Memcpy(val_ptr, reg->value, size);
+		return 0;
+	}else{
+		return -1;
+	}
+}
+
+
+/**********************************************************************************************************************/
+
+
+template <int func(u32, const char *, int, u32)> void WrapI_UCIU() {
+	int retval = func(PARAM(0), Memory::GetCharPointer(PARAM(1)), PARAM(2), PARAM(3));
+	RETURN(retval);
+}
+
+template <int func(u32, const char *, u32, u32, u32)> void WrapI_UCUUU() {
+	int retval = func(PARAM(0), Memory::GetCharPointer(PARAM(1)), PARAM(2), PARAM(3), PARAM(4));
+	RETURN(retval);
+}
+
+const HLEFunction sceReg[] = {
+	{0x92E41280, WrapI_UIU<sceRegOpenRegistry> , "sceRegOpenRegistry"},	
+	{0xFA8A5739, WrapI_U<sceRegCloseRegistry>, "sceRegCloseRegistry"},	
+	{0x1D8A762E, WrapI_UCIU<sceRegOpenCategory> , "sceRegOpenCategory"},	
+	{0x0CAE832B, WrapI_U<sceRegCloseCategory>, "sceRegCloseCategory"},	
+	{0xD4475AA8, WrapI_UCUUU<sceRegGetKeyInfo>   , "sceRegGetKeyInfo"},	
+	{0x28A8E98A, WrapI_UUUU<sceRegGetKeyValue>  , "sceRegGetKeyValue"},	
+};
+
 void Register_sceFont() {
 	//RegisterModule("sceLibFont", ARRAY_SIZE(sceLibFont), sceLibFont);
+	RegisterModule("MaiLibFont", ARRAY_SIZE(sceLibFont), sceLibFont);
+	RegisterModule("sceReg", ARRAY_SIZE(sceReg), sceReg);
 }
 

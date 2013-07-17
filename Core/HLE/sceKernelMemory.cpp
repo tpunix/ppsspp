@@ -449,6 +449,7 @@ public:
 				address = alloc->Alloc(size, type == PSP_SMEM_High, name);
 			alloc->ListBlocks();
 		}
+		_size = size;
 	}
 	~PartitionMemoryBlock()
 	{
@@ -466,6 +467,7 @@ public:
 	}
 
 	u32 address;
+	u32 _size;
 	char name[32];
 };
 
@@ -549,6 +551,7 @@ u32 sceKernelGetBlockHeadAddr(SceUID id)
 	if (block)
 	{
 		DEBUG_LOG(HLE,"%08x = sceKernelGetBlockHeadAddr(%i)", block->address, id);
+		Memory::Memset(block->address, 0, block->_size);
 		return block->address;
 	}
 	else

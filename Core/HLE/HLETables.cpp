@@ -115,6 +115,10 @@ const HLEFunction UtilsForUser[] =
 	{0x920f104a, WrapU_V<sceKernelIcacheInvalidateAll>, "sceKernelIcacheInvalidateAll"}
 };				   
 
+const HLEFunction UtilsForKernel[] = 
+{
+	{0xC2DF770E, WrapI_UI<sceKernelIcacheInvalidateRange>, "sceKernelIcacheInvalidateRange"},
+};
 
 const HLEFunction IoFileMgrForKernel[] =
 {
@@ -203,6 +207,7 @@ const HLEModule moduleList[] =
 {
 	{"FakeSysCalls", SZ(FakeSysCalls), FakeSysCalls},
 	{"UtilsForUser",SZ(UtilsForUser),UtilsForUser},
+	{"UtilsForKernel",SZ(UtilsForKernel),UtilsForKernel},
 	{"KDebugForKernel",SZ(KDebugForKernel),KDebugForKernel},
 	{"sceSAScore"},
 	{"SceBase64_Library"},
