@@ -67,6 +67,7 @@
 #include "sceUsb.h"
 #include "sceUtility.h"
 #include "sceVaudio.h"
+#include "sceReg.h"
 
 #define N(s) s
 
@@ -312,6 +313,7 @@ void RegisterAllModules() {
 	Register_sceJpeg();
 	Register_sceAudiocodec();
 	Register_sceHeap();
+	Register_sceReg();
 
 	for (int i = 0; i < numModules; i++)
 	{

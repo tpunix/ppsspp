@@ -496,6 +496,9 @@
     <ClCompile Include="Dialog\PSPGamedataInstallDialog.cpp">
       <Filter>Dialog</Filter>
     </ClCompile>
+    <ClCompile Include="HLE\sceReg.cpp">
+      <Filter>HLE\Libraries</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ELF\ElfReader.h">
@@ -911,6 +914,9 @@
     </ClInclude>
     <ClInclude Include="Dialog\PSPGamedataInstallDialog.h">
       <Filter>Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="HLE\sceReg.h">
+      <Filter>HLE\Libraries</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

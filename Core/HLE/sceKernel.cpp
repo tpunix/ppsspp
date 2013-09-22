@@ -73,6 +73,7 @@
 #include "scePspNpDrm_user.h"
 #include "sceVaudio.h"
 #include "sceHeap.h"
+#include "sceReg.h"
 
 #include "../Util/PPGeDraw.h"
 
@@ -131,6 +132,7 @@ void __KernelInit()
 	__NetAdhocInit();
 	__VaudioInit();
 	__CheatInit();
+	__RegInit();
 	
 	SaveState::Init();  // Must be after IO, as it may create a directory
 
@@ -156,6 +158,7 @@ void __KernelShutdown()
 	__NetShutdown();
 	__NetAdhocShutdown();
 	__FontShutdown();
+	__RegShutdown();
 
 	__MpegShutdown();
 	__PsmfShutdown();
@@ -242,6 +245,7 @@ void __KernelDoState(PointerWrap &p)
 		__UsbDoState(p);
 		__VaudioDoState(p);
 		__HeapDoState(p);
+		__RegDoState(p);
 
 		__PPGeDoState(p);
 	}
