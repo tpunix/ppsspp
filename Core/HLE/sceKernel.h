@@ -561,3 +561,4 @@ void Register_ThreadManForUser();
 void Register_ThreadManForKernel();
 void Register_LoadExecForUser();
 void Register_UtilsForKernel();
+void Register_KUBridge();

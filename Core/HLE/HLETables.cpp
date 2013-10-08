@@ -314,6 +314,7 @@ void RegisterAllModules() {
 	Register_sceAudiocodec();
 	Register_sceHeap();
 	Register_sceReg();
+	Register_KUBridge();
 
 	for (int i = 0; i < numModules; i++)
 	{
