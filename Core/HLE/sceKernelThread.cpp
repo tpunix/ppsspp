@@ -2124,7 +2124,7 @@ int sceKernelStartThread(SceUID threadToStartID, int argSize, u32 argBlockPtr)
 		ERROR_LOG_REPORT(SCEKERNEL, "%08x=sceKernelStartThread(thread=%i, argSize=%i, argPtr=%08x): NULL thread", error, threadToStartID, argSize, argBlockPtr);
 		return error;
 	}
-	if (argSize < 0 || argBlockPtr & 0x80000000)
+	if (argSize < 0)
 	{
 		error = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 		ERROR_LOG_REPORT(SCEKERNEL, "%08x=sceKernelStartThread(thread=%i, argSize=%i, argPtr=%08x): bad argument pointer/length", error, threadToStartID, argSize, argBlockPtr);
@@ -3349,6 +3349,20 @@ void __KernelDirectMipsCall(u32 entryPoint, Action *afterAction, u32 args[], int
 	__KernelCallAddress(__GetCurrentThread(), entryPoint, afterAction, args, numargs, reschedAfter, 0);
 }
 
+void __KernelDirectMipsCall(SceUID threadID, u32 entryPoint, Action *afterAction, u32 args[], int numargs, bool reschedAfter)
+{
+	u32 error;
+	Thread *thread = kernelObjects.Get<Thread>(threadID, error);
+	if (!thread)
+	{
+		// This probably should not happen.
+		WARN_LOG_REPORT(SCEKERNEL, "__KernelDirectMipsCall: invalid threadID!");
+		return;
+	}
+
+	__KernelCallAddress(thread, entryPoint, afterAction, args, numargs, reschedAfter, 0);
+}
+
 void __KernelExecuteMipsCallOnCurrentThread(u32 callId, bool reschedAfter)
 {
 	Thread *cur = __GetCurrentThread();
@@ -3380,6 +3394,9 @@ void __KernelExecuteMipsCallOnCurrentThread(u32 callId, bool reschedAfter)
 	// We may want it later to "inject" return values.
 	currentMIPS->r[MIPS_REG_CALL_ID] = callId;
 	cur->currentMipscallId = callId;
+	for (int i = 0; i < 6; i++) {
+		call->savedArgs[i] = currentMIPS->r[MIPS_REG_A0 + i];
+	}
 	for (int i = 0; i < call->numArgs; i++) {
 		currentMIPS->r[MIPS_REG_A0 + i] = call->args[i];
 	}
@@ -3422,6 +3439,9 @@ void __KernelReturnFromMipsCall()
 	currentMIPS->r[MIPS_REG_V0] = call->savedV0;
 	currentMIPS->r[MIPS_REG_V1] = call->savedV1;
 	currentMIPS->r[MIPS_REG_CALL_ID] = call->savedIdRegister;
+	for (int i = 0; i < 6; i++) {
+		currentMIPS->r[MIPS_REG_A0 + i] = call->savedArgs[i];
+	}
 	cur->currentMipscallId = call->savedId;
 
 	if (call->cbId != 0)

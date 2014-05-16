@@ -341,7 +341,7 @@ void ElfReader::LoadRelocations2(int rel_seg)
 }
 
 
-int ElfReader::LoadInto(u32 loadAddress)
+int ElfReader::LoadInto(u32 load_flag, const char *tags)
 {
 	DEBUG_LOG(LOADER,"String section: %i", header->e_shstrndx);
 
@@ -385,17 +385,18 @@ int ElfReader::LoadInto(u32 loadAddress)
 	if (!bRelocate)
 	{
 		// Binary is prerelocated, load it where the first segment starts
-		vaddr = userMemory.AllocAt(totalStart, totalSize, "ELF");
-	}
-	else if (loadAddress)
-	{
-		// Binary needs to be relocated: add loadAddress to the binary start address
-		vaddr = userMemory.AllocAt(loadAddress + totalStart, totalSize, "ELF");
+		if(load_flag&0x01)
+			vaddr = kernelMemory.AllocAt(totalStart, totalSize, tags);
+		else
+			vaddr = userMemory.AllocAt(totalStart, totalSize, tags);
 	}
 	else
 	{
 		// Just put it where there is room
-		vaddr = userMemory.Alloc(totalSize, false, "ELF");
+		if(load_flag&0x01)
+			vaddr = kernelMemory.Alloc(totalSize, false, tags);
+		else
+			vaddr = userMemory.Alloc(totalSize, false, tags);
 	}
 
 	if (vaddr == (u32)-1) {
@@ -440,6 +441,7 @@ int ElfReader::LoadInto(u32 loadAddress)
 		}
 	}
 	userMemory.ListBlocks();
+	kernelMemory.ListBlocks();
 
 	DEBUG_LOG(LOADER,"%i sections:", header->e_shnum);
 

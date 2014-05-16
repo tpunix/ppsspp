@@ -19,6 +19,7 @@
 
 #include "../Globals.h"
 #include "../MIPS/MIPS.h"
+#include "sceKernel.h"
 
 typedef void (* HLEFunc)();
 
@@ -28,10 +29,17 @@ enum {
 
 	// The remaining 24 bits are flags.
 	// Don't allow the call within an interrupt.  Not yet implemented.
-	HLE_NOT_IN_INTERRUPT = 1 << 8,
+	HLE_NOT_IN_INTERRUPT = 1 << 16,
 	// Don't allow the call if dispatch or interrupts are disabled.
-	HLE_NOT_DISPATCH_SUSPENDED = 1 << 9,
+	HLE_NOT_DISPATCH_SUSPENDED = 1 << 17,
+
+	EXPORT_DIRECT  = 0x0001,
+	EXPORT_SYSCALL = 0x4001,
+	EXPORT_SYSLIB  = 0x8000,
+	EXPORT_HLE     = 0x2000,
 };
+
+
 
 struct HLEFunction
 {
@@ -46,6 +54,11 @@ struct HLEModule
 	const char *name;
 	int numFunctions;
 	const HLEFunction *funcTable;
+};
+
+struct ModuleExports {
+	char name[KERNELOBJECT_MAX_NAME_LENGTH+1];
+	std::vector<HLEFunction> funcs;
 };
 
 typedef char SyscallModuleName[32];
@@ -78,6 +91,7 @@ int GetFuncIndex(int moduleIndex, u32 nib);
 int GetModuleIndex(const char *modulename);
 
 void RegisterModule(const char *name, int numFunctions, const HLEFunction *funcTable);
+void RegisterExportFunc(const char *moduleName, u32 nid, u32 symAddr, u32 flags, const char *funcName);
 
 // Run the current thread's callbacks after the syscall finishes.
 void hleCheckCurrentCallbacks();

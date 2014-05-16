@@ -59,10 +59,29 @@ enum
 typedef std::vector<Syscall> SyscallVector;
 typedef std::map<std::string, SyscallVector> SyscallVectorByModule;
 
-static std::vector<HLEModule> moduleDB;
+static std::vector<ModuleExports> moduleDB;
 static int delayedResultEvent = -1;
 static int hleAfterSyscall = HLE_AFTER_NOTHING;
 static const char *hleAfterSyscallReschedReason;
+
+class PostMipsCall : public Action {
+public:
+	PostMipsCall() {}
+	void run(MipsCall &call);
+	void DoState(PointerWrap &p);
+};
+
+void PostMipsCall::run(MipsCall &call)
+{
+	call.savedV0 = currentMIPS->r[MIPS_REG_V0];
+	call.savedV1 = currentMIPS->r[MIPS_REG_V1];
+	call.savedPc = call.savedRa;
+}
+
+void PostMipsCall::DoState(PointerWrap &p)
+{
+}
+
 
 void hleDelayResultFinish(u64 userdata, int cycleslate)
 {
@@ -78,6 +97,7 @@ void hleDelayResultFinish(u64 userdata, int cycleslate)
 	else
 		WARN_LOG(HLE, "Someone else woke up HLE-blocked thread?");
 }
+
 
 void HLEInit()
 {
@@ -103,8 +123,45 @@ void HLEShutdown()
 
 void RegisterModule(const char *name, int numFunctions, const HLEFunction *funcTable)
 {
-	HLEModule module = {name, numFunctions, funcTable};
-	moduleDB.push_back(module);
+	int index;
+
+	index = GetModuleIndex(name);
+	if(index==-1){
+		ModuleExports module;
+		strcpy(module.name, name);
+		moduleDB.push_back(module);
+	}
+
+	index = GetModuleIndex(name);
+	for (int i=0; i<numFunctions; i++) {
+		HLEFunction func = {funcTable[i].ID, funcTable[i].func, funcTable[i].name, funcTable[i].flags|EXPORT_HLE};
+		moduleDB[index].funcs.push_back(func);
+	}
+
+}
+
+void RegisterExportFunc(const char *moduleName, u32 nid, u32 symAddr, u32 flags, const char *funcName)
+{
+	int index, fid;
+
+	index = GetModuleIndex(moduleName);
+	if(index==-1){
+		ModuleExports module;
+		strcpy(module.name, moduleName);
+		moduleDB.push_back(module);
+	}
+
+	index = GetModuleIndex(moduleName);
+	fid = GetFuncIndex(index, nid);
+	if(fid==-1){
+		HLEFunction func = {nid, (HLEFunc)symAddr, funcName, flags};
+		moduleDB[index].funcs.push_back(func);
+	}else{
+		ModuleExports &module = moduleDB[index];
+		module.funcs[fid].func = (HLEFunc)symAddr;
+		module.funcs[fid].flags &= 0xffff0000;
+		module.funcs[fid].flags |= flags&0xffff;
+	}
 }
 
 int GetModuleIndex(const char *moduleName)
@@ -117,10 +174,10 @@ int GetModuleIndex(const char *moduleName)
 
 int GetFuncIndex(int moduleIndex, u32 nib)
 {
-	const HLEModule &module = moduleDB[moduleIndex];
-	for (int i = 0; i < module.numFunctions; i++)
+	const ModuleExports &module = moduleDB[moduleIndex];
+	for (size_t i = 0; i < module.funcs.size(); i++)
 	{
-		if (module.funcTable[i].ID == nib)
+		if (module.funcs[i].ID == nib)
 			return i;
 	}
 	return -1;
@@ -129,11 +186,11 @@ int GetFuncIndex(int moduleIndex, u32 nib)
 u32 GetNibByName(const char *moduleName, const char *function)
 {
 	int moduleIndex = GetModuleIndex(moduleName);
-	const HLEModule &module = moduleDB[moduleIndex];
-	for (int i = 0; i < module.numFunctions; i++)
+	const ModuleExports &module = moduleDB[moduleIndex];
+	for (size_t i = 0; i < module.funcs.size(); i++)
 	{
-		if (!strcmp(module.funcTable[i].name, function))
-			return module.funcTable[i].ID;
+		if (!strcmp(module.funcs[i].name, function))
+			return module.funcs[i].ID;
 	}
 	return -1;
 }
@@ -145,7 +202,7 @@ const HLEFunction *GetFunc(const char *moduleName, u32 nib)
 	{
 		int idx = GetFuncIndex(moduleIndex, nib);
 		if (idx != -1)
-			return &(moduleDB[moduleIndex].funcTable[idx]);
+			return &(moduleDB[moduleIndex].funcs[idx]);
 	}
 	return 0;
 }
@@ -172,6 +229,9 @@ u32 GetSyscallOp(const char *moduleName, u32 nib)
 	}
 
 	int modindex = GetModuleIndex(moduleName);
+	if(modindex==83){
+		//INFO_LOG(HLE, "Syscall (%s, %08x)", moduleName, nib);
+	}
 	if (modindex != -1)
 	{
 		int funcindex = GetFuncIndex(modindex, nib);
@@ -240,10 +300,10 @@ const char *GetFuncName(int moduleIndex, int func)
 {
 	if (moduleIndex >= 0 && moduleIndex < (int)moduleDB.size())
 	{
-		const HLEModule &module = moduleDB[moduleIndex];
-		if (func >= 0 && func < module.numFunctions)
+		const ModuleExports &module = moduleDB[moduleIndex];
+		if (func >= 0 && func < (int)module.funcs.size())
 		{
-			return module.funcTable[func].name;
+			return module.funcs[func].name;
 		}
 	}
 	return "[unknown]";
@@ -401,7 +461,7 @@ inline void hleFinishSyscall(const HLEFunction &info)
 
 inline void updateSyscallStats(int modulenum, int funcnum, double total)
 {
-	const char *name = moduleDB[modulenum].funcTable[funcnum].name;
+	const char *name = moduleDB[modulenum].funcs[funcnum].name;
 	// Ignore this one, especially for msInSyscalls (although that ignores CoreTiming events.)
 	if (0 == strcmp(name, "_sceKernelIdle"))
 		return;
@@ -435,6 +495,7 @@ inline void updateSyscallStats(int modulenum, int funcnum, double total)
 	}
 }
 
+
 inline void CallSyscallWithFlags(const HLEFunction *info)
 {
 	const u32 flags = info->flags;
@@ -448,8 +509,19 @@ inline void CallSyscallWithFlags(const HLEFunction *info)
 		DEBUG_LOG(HLE, "%s: in interrupt", info->name);
 		RETURN(SCE_KERNEL_ERROR_ILLEGAL_CONTEXT);
 	}
-	else
+	else if((info->flags&0xffff)==EXPORT_HLE)
+	{
 		info->func();
+	}
+	else
+	{
+		u32 args[6];
+		for (int i = 0; i < 6; i++) {
+			args[i] = currentMIPS->r[MIPS_REG_A0 + i];
+		}
+		PostMipsCall *postCallobj = new PostMipsCall();
+		__KernelDirectMipsCall((u32)(info->func), postCallobj, args, 6, 0);
+	}
 
 	if (hleAfterSyscall != HLE_AFTER_NOTHING)
 		hleFinishSyscall(*info);
@@ -477,7 +549,7 @@ const HLEFunction *GetSyscallInfo(MIPSOpcode op)
 		ERROR_LOG(HLE,"Unknown syscall: Module: %s", modulenum > (int) moduleDB.size() ? "(unknown)" : moduleDB[modulenum].name); 
 		return NULL;
 	}
-	return &moduleDB[modulenum].funcTable[funcnum];
+	return &moduleDB[modulenum].funcs[funcnum];
 }
 
 void *GetQuickSyscallFunc(MIPSOpcode op)

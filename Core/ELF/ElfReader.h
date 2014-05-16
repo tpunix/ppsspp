@@ -133,7 +133,7 @@ public:
 	}
 
 	// More indepth stuff:)
-	int LoadInto(u32 vaddr);
+	int LoadInto(u32 load_flag, const char *tags);
 	bool LoadSymbols();
 	bool LoadRelocations(Elf32_Rel *rels, int numRelocs);
 	void LoadRelocations2(int rel_seg);

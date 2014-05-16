@@ -265,6 +265,7 @@ void RegisterAllModules() {
 	Register_IoFileMgrForUser();
 	Register_ModuleMgrForUser();
 	Register_ModuleMgrForKernel();
+	Register_SysclibForKernel();
 	Register_StdioForUser();
 
 	Register_sceHprm();

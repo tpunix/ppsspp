@@ -2153,8 +2153,49 @@ const HLEFunction IoFileMgrForUser[] = {
 	{ 0x5C2BE2CC, &WrapU_UIU<sceIoGetFdList>, "sceIoGetFdList"},
 };
 
+const HLEFunction IoFileMgrForKernel[] = {
+	{ 0xb29ddf9c, &WrapU_C<sceIoDopen>, "sceIoDopen" },
+	{ 0xe3eb004c, &WrapU_IU<sceIoDread>, "sceIoDread" },
+	{ 0xeb092469, &WrapU_I<sceIoDclose>, "sceIoDclose" },
+	{ 0xe95a012b, &WrapU_UUUUUU<sceIoIoctlAsync>, "sceIoIoctlAsync" },
+	{ 0x63632449, &WrapU_UUUUUU<sceIoIoctl>, "sceIoIoctl" },
+	{ 0xace946e8, &WrapU_CU<sceIoGetstat>, "sceIoGetstat" },
+	{ 0xb8a740f4, &WrapU_CUU<sceIoChstat>, "sceIoChstat" },
+	{ 0x55f4717d, &WrapU_C<sceIoChdir>, "sceIoChdir" },
+	{ 0x08bd7374, &WrapU_I<sceIoGetDevType>, "sceIoGetDevType" },
+	{ 0xB2A628C1, &WrapU_UUUIUI<sceIoAssign>, "sceIoAssign" },
+	{ 0xe8bc6571, &WrapU_I<sceIoCancel>, "sceIoCancel" },
+	{ 0xb293727f, &WrapI_II<sceIoChangeAsyncPriority>, "sceIoChangeAsyncPriority" },
+	{ 0x810C4BC3, &WrapU_I<sceIoClose>, "sceIoClose" }, //(int fd);
+	{ 0xff5940b6, &WrapI_I<sceIoCloseAsync>, "sceIoCloseAsync" },
+	{ 0x54F5FB11, &WrapU_CIUIUI<sceIoDevctl>, "sceIoDevctl" }, //(const char *name int cmd, void *arg, size_t arglen, void *buf, size_t *buflen);
+	{ 0xcb05f8d6, &WrapU_IUU<sceIoGetAsyncStat>, "sceIoGetAsyncStat" },
+	{ 0x27EB27B8, &WrapI64_II64I<sceIoLseek>, "sceIoLseek" }, //(int fd, int offset, int whence);
+	{ 0x68963324, &WrapU_III<sceIoLseek32>, "sceIoLseek32" },
+	{ 0x1b385d8f, &WrapU_III<sceIoLseek32Async>, "sceIoLseek32Async" },
+	{ 0x71b19e77, &WrapU_II64I<sceIoLseekAsync>, "sceIoLseekAsync" },
+	{ 0x109F50BC, &WrapU_CII<sceIoOpen>, "sceIoOpen" }, //(const char* file, int mode);
+	{ 0x89AA9906, &WrapU_CII<sceIoOpenAsync>, "sceIoOpenAsync" },
+	{ 0x06A70004, &WrapU_CI<sceIoMkdir>, "sceIoMkdir" }, //(const char *dir, int mode);
+	{ 0x3251ea56, &WrapU_IU<sceIoPollAsync>, "sceIoPollAsync" },
+	{ 0x6A638D83, &WrapU_IUI<sceIoRead>, "sceIoRead" }, //(int fd, void *data, int size);
+	{ 0xa0b5a7c2, &WrapU_IUI<sceIoReadAsync>, "sceIoReadAsync" },
+	{ 0xF27A9C51, &WrapU_C<sceIoRemove>, "sceIoRemove" }, //(const char *file);
+	{ 0x779103A0, &WrapU_CC<sceIoRename>, "sceIoRename" }, //(const char *oldname, const char *newname);
+	{ 0x1117C65F, &WrapU_C<sceIoRmdir>, "sceIoRmdir" }, //(const char *dir);
+	{ 0xA12A0514, &WrapU_IUU<sceIoSetAsyncCallback>, "sceIoSetAsyncCallback" },
+	{ 0xab96437f, &WrapU_CI<sceIoSync>, "sceIoSync" },
+	{ 0x6d08a871, &WrapU_C<sceIoUnassign>, "sceIoUnassign" },
+	{ 0x42EC03AC, &WrapU_IUI<sceIoWrite>, "sceIoWrite" }, //(int fd, void *data, int size);
+	{ 0x0facab19, &WrapU_IUI<sceIoWriteAsync>, "sceIoWriteAsync" },
+	{ 0x35dbd746, &WrapI_IU<sceIoWaitAsyncCB>, "sceIoWaitAsyncCB" },
+	{ 0xe23eec33, &WrapI_IU<sceIoWaitAsync>, "sceIoWaitAsync" },
+	{ 0x5C2BE2CC, &WrapU_UIU<sceIoGetFdList>, "sceIoGetFdList"},
+};
+
 void Register_IoFileMgrForUser() {
 	RegisterModule("IoFileMgrForUser", ARRAY_SIZE(IoFileMgrForUser), IoFileMgrForUser);
+	RegisterModule("IoFileMgrForKernel", ARRAY_SIZE(IoFileMgrForKernel), IoFileMgrForKernel);
 }
 
 
@@ -2172,6 +2213,21 @@ const HLEFunction StdioForUser[] = {
 	{ 0x9d061c19, 0, "sceKernelStdioClose" },
 };
 
+const HLEFunction StdioForKernel[] = {
+	{ 0x172D316E, &WrapU_V<sceKernelStdin>, "sceKernelStdin" },
+	{ 0xA6BAB2E9, &WrapU_V<sceKernelStdout>, "sceKernelStdout" },
+	{ 0xF78BA90A, &WrapU_V<sceKernelStderr>, "sceKernelStderr" },
+	{ 0x432D8F5C, &WrapU_U<sceKernelRegisterStdoutPipe>, "sceKernelRegisterStdoutPipe" },
+	{ 0x6F797E03, &WrapU_U<sceKernelRegisterStderrPipe>, "sceKernelRegisterStderrPipe" },
+	{ 0xa46785c9, 0, "sceKernelStdioSendChar" },
+	{ 0x0cbb0571, 0, "sceKernelStdioLseek" },
+	{ 0x3054d478, 0, "sceKernelStdioRead" },
+	{ 0xa3b931db, 0, "sceKernelStdioWrite" },
+	{ 0x924aba61, 0, "sceKernelStdioOpen" },
+	{ 0x9d061c19, 0, "sceKernelStdioClose" },
+};
+
 void Register_StdioForUser() {
 	RegisterModule("StdioForUser", ARRAY_SIZE(StdioForUser), StdioForUser);
+	RegisterModule("StdioForKernel", ARRAY_SIZE(StdioForKernel), StdioForKernel);
 }

@@ -210,6 +210,8 @@ void __KernelMemoryInit()
 {
 	kernelMemory.Init(PSP_GetKernelMemoryBase(), PSP_GetKernelMemoryEnd()-PSP_GetKernelMemoryBase());
 	userMemory.Init(PSP_GetUserMemoryBase(), PSP_GetUserMemoryEnd()-PSP_GetUserMemoryBase());
+	u32 alloc_size = 0x4000;
+	userMemory.Alloc(alloc_size, 0, "for usersyslib.prx");
 	INFO_LOG(SCEKERNEL, "Kernel and user memory pools initialized");
 
 	vplWaitTimer = CoreTiming::RegisterEvent("VplTimeout", __KernelVplTimeout);
@@ -705,6 +707,7 @@ public:
 			else
 				address = alloc->Alloc(size, type == PSP_SMEM_High, name);
 			alloc->ListBlocks();
+			kernelMemory.ListBlocks();
 		}
 	}
 	~PartitionMemoryBlock()

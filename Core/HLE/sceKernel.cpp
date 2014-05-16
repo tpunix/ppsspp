@@ -872,9 +872,10 @@ const HLEFunction ThreadManForUser[] =
 
 const HLEFunction ThreadManForKernel[] =
 {
-	{0xceadeb47, WrapI_U<ThreadManForKernel_ceadeb47>, "ThreadManForKernel_ceadeb47"},
-	{0x446d8de6, WrapI_CUUIUU<ThreadManForKernel_446d8de6>, "ThreadManForKernel_446d8de6"},//Not sure right
-	{0xf475845d, &WrapI_IIU<ThreadManForKernel_f475845d>, "ThreadManForKernel_f475845d"},//Not sure right
+	{0xceadeb47, WrapI_U<sceKernelDelayThread>, "sceKernelDelayThread"},
+	{0x446d8de6, WrapI_CUUIUU<sceKernelCreateThread>, "sceKernelCreateThread"},//Not sure right
+	{0xf475845d, &WrapI_IIU<sceKernelStartThread>, "sceKernelStartThread"},//Not sure right
+	{0x809ce29b,WrapV_I<sceKernelExitDeleteThread>,"sceKernelExitDeleteThread"},
 };
 
 void Register_ThreadManForUser()
@@ -949,3 +950,22 @@ void Register_ThreadManForKernel()
 	RegisterModule("ThreadManForKernel", ARRAY_SIZE(ThreadManForKernel), ThreadManForKernel);		
 
 }
+
+
+template<int func(const char *, const char *)> void WrapI_CC() {
+	int retval = func(Memory::GetCharPointer(PARAM(0)), Memory::GetCharPointer(PARAM(1)));
+	RETURN(retval);
+}
+
+const HLEFunction SysclibForKernel[] = {
+	{0xC0AB8932, &WrapI_CC<strcmp>, "strcmp"},
+	{0x52DF196C, &WrapU_C<strlen>, "strlen"},
+};
+
+void Register_SysclibForKernel()
+{
+	RegisterModule("SysclibForKernel", ARRAY_SIZE(SysclibForKernel), SysclibForKernel);
+}
+
+
+

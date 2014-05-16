@@ -205,6 +205,8 @@ class Action;
 
 // Not an official Callback object, just calls a mips function on the current thread.
 void __KernelDirectMipsCall(u32 entryPoint, Action *afterAction, u32 args[], int numargs, bool reschedAfter);
+void __KernelDirectMipsCall(SceUID threadID, u32 entryPoint, Action *afterAction, u32 args[], int numargs, bool reschedAfter);
+
 
 void __KernelReturnFromMipsCall();  // Called as HLE function
 bool __KernelInCallback();
@@ -250,6 +252,7 @@ struct MipsCall {
 	u32 savedPc;
 	u32 savedV0;
 	u32 savedV1;
+	u32 savedArgs[6];
 	std::string tag;
 	u32 savedId;
 	bool reschedAfter;

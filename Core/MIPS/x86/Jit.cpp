@@ -467,7 +467,8 @@ void Jit::WriteExitDestInEAX()
 	// Validate the jump to avoid a crash?
 	if (!g_Config.bFastMemory)
 	{
-		CMP(32, R(EAX), Imm32(PSP_GetKernelMemoryBase()));
+		//CMP(32, R(EAX), Imm32(PSP_GetKernelMemoryBase()));
+		CMP(32, R(EAX), Imm32(0x08000000));
 		FixupBranch tooLow = J_CC(CC_B);
 		CMP(32, R(EAX), Imm32(PSP_GetUserMemoryEnd()));
 		FixupBranch tooHigh = J_CC(CC_AE);
@@ -646,7 +647,8 @@ OpArg Jit::JitSafeMem::PrepareMemoryOpArg(ReadType type)
 	if (!fast_)
 	{
 		// Is it in physical ram?
-		jit_->CMP(32, R(xaddr_), Imm32(PSP_GetKernelMemoryBase() - offset_));
+		//jit_->CMP(32, R(xaddr_), Imm32(PSP_GetKernelMemoryBase() - offset_));
+		jit_->CMP(32, R(xaddr_), Imm32(0x08000000 - offset_));
 		tooLow_ = jit_->J_CC(CC_B);
 		jit_->CMP(32, R(xaddr_), Imm32(PSP_GetUserMemoryEnd() - offset_ - (size_ - 1)));
 		tooHigh_ = jit_->J_CC(CC_AE);
